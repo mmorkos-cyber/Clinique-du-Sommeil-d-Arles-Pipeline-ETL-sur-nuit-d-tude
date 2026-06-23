@@ -100,3 +100,11 @@ VALUES (
     nb_ronflements_forts
 );
 END
+
+Vue pour l'écriture du rapport, elle relie l'ID_patient aux résultats de la nuit_etude :
+
+CREATE VIEW `resultat_nuit_lies_patient` AS
+SELECT resultat_nuit.date_validation, resultat_nuit.iah, resultat_nuit.spo2_min, resultat_nuit.spo2_moy, resultat_nuit.spo2_mediane, resultat_nuit.nb_apnees, resultat_nuit.nb_hypopnees, resultat_nuit.nb_rera, resultat_nuit.nb_microeveils, resultat_nuit.duree_sommeil_min, resultat_nuit.duree_hypoxie_min, resultat_nuit.position_dominante, resultat_nuit.duree_apnee_moy_sec, resultat_nuit.duree_apnee_max_sec, resultat_nuit.decibels_max, resultat_nuit.decibels_moy, resultat_nuit.nb_ronflements_forts, resultat_nuit.severite_iah, resultat_nuit.commentaire_medical, nuit_etude.id_patient, patient.nom
+FROM resultat_nuit 
+LEFT JOIN nuit_etude ON resultat_nuit.id_nuit = nuit_etude.id_nuit
+LEFT JOIN patient ON nuit_etude.id_patient = patient.id_patient
