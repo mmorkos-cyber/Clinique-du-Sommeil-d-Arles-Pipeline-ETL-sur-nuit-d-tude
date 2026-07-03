@@ -31,16 +31,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import mysql.connector
 from mysql.connector import Error as MySQLError
-from mdp import motDePasse, bdd, port
+from mdp import motdepasse, bdd, port
 
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # CONFIGURATION
 # ============================================================
 MYSQL_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": motDePasse,
+    "password": motdepasse,
     "database": bdd,
     "port": port,
     
@@ -244,7 +243,7 @@ def diagnostic_depuis_iah(iah):
 # ============================================================
 # 3) LOAD : écriture en base (procédure sp_creer_resultat_nuit)
 # ============================================================
-def ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentaire_medical):
+def ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentaire_medical_arg):
     """
     Appelle la procédure stockée sp_creer_resultat_nuit pour insérer
     (ou mettre à jour) le résultat de la nuit. La procédure se
@@ -274,7 +273,7 @@ def ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentair
             indicateurs["decibels_moy"],
             indicateurs["nb_ronflements_forts"],
             indicateurs["duree_sommeil_min"],
-            commentaire_medical
+            commentaire_medical_arg
             
         ])
 
@@ -627,7 +626,7 @@ def executer_pipeline(id_nuit, id_medecin_validateur, commentaire_medical):
         print(['position dominante'])
         # --- LOAD : écriture via procédure ---
         print("\n[3/6] Écriture du résultat via sp_creer_resultat_nuit...")
-        confirmation = ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentaire_medical)
+        confirmation = ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentaire_medical_arg)
         print(f"  IAH calculé par la procédure : {confirmation['iah']}")
         print(f"  Diagnostic : {diagnostic_depuis_iah(float(confirmation['iah']))}")
 
@@ -671,7 +670,7 @@ if __name__ == "__main__":
     try:
         id_nuit_arg = int(sys.argv[1])
         id_medecin_validateur_arg = int(sys.argv[2])
-        commentaire_medical_arg = sys.argv[3]
+        commentaire_medical_arg = str(sys.argv[3])
     except ValueError:
         print("Erreur : id_nuit et id_medecin_validateur doivent être des nombres entiers ou commentaire manquant.", file=sys.stderr)
         sys.exit(1)

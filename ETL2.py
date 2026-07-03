@@ -1,13 +1,11 @@
 import os
 import sys
-import shutil
 import sqlite3
-import warnings
 import pandas as pd
 import matplotlib.pyplot as plt
 import mysql.connector
 from mysql.connector import Error as MySQLError
-from mdp import motDePasse, bdd, port
+from mdp import motdepasse, bdd, port
 
 # ============================================================
 # CONFIGURATION
@@ -15,7 +13,7 @@ from mdp import motDePasse, bdd, port
 MYSQL_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": motDePasse,
+    "password": motdepasse,
     "database": bdd,
     "port": port,
     
@@ -28,7 +26,6 @@ DB_PATH = "base_analytique.db"
 # UTILITAIRE : retrouver le CSV depuis l'id_nuit
 # ============================================================
 DOSSIER_RAW = "raw"
-
 
 def trouver_csv_depuis_id_patient(id_patient, dossier_raw=DOSSIER_RAW):
     """
@@ -175,42 +172,99 @@ def initialiser_database(chemin_db=DB_PATH):
     connexion.close()
 
 
-
-
-
-def alimenter_faits_suivi_cpap_jour(id_suivi_source, id_patient, duree_utilisation_h, iah_residuel, 
-                                    fuites_l_min, nb_evenements, qualite_donnee, chemin_db=DB_PATH):
+def alimenter_faits_suivi_cpap_jour(id_suivi_source, id_patient, date_jour, duree_utilisation_h, iah_residuel, 
+                                    fuites_l_min, nb_evenements, qualite_donnee, id_suivi_le_plus_proche, chemin_db=DB_PATH):
    
     connexion = sqlite3.connect(chemin_db)
 
-    alerte_observance_insuffisante = 1 if duree_utilisation_h < 4 else 0
-    alerte_iah_eleve = 1 if iah_residuel > 5 else 0
+    try:
+        alerte_observance_insuffisante = 1 if duree_utilisation_h < 4 else 0
+        alerte_iah_eleve = 1 if iah_residuel > 5 else 0
 
-    df_cpap = pd.DataFrame([{
-        "id_suivi_source":id_suivi_source,
-        "id_patient": id_patient, 
-        "id_temps":20240506,      
-        "duree_utilisation_h": duree_utilisation_h,
-        "iah_residuel": iah_residuel,
-        "fuites_l_min": fuites_l_min,
-        "nb_evenements": nb_evenements,
-        "qualite_donnee": qualite_donnee,
-        "id_suivi_le_plus_proche" : 55,
-        "alerte_observance_insuffisante": alerte_observance_insuffisante,
-        "alerte_iah_eleve": alerte_iah_eleve,
-        
-    }])
+        df_cpap = pd.DataFrame([{
+            "id_suivi_source": id_suivi_source,
+            "id_patient": id_patient,
+            "id_temps": int(date_jour),
+            "duree_utilisation_h": duree_utilisation_h,
+            "iah_residuel": iah_residuel,
+            "fuites_l_min": fuites_l_min,
+            "nb_evenements": nb_evenements,
+            "qualite_donnee": qualite_donnee,
+            "id_suivi_le_plus_proche": id_suivi_le_plus_proche,
+            "alerte_observance_insuffisante": alerte_observance_insuffisante,
+            "alerte_iah_eleve": alerte_iah_eleve
+        }])
 
-    df_cpap.to_sql("faits_suivi_cpap_jour", connexion, if_exists="append", index=False)
+        import traceback
 
-    connexion.close()
-    print(f"  Ligne faits_suivi_cpap_jour insérée pour id_patient={id_patient}")
+        try:
+            df_cpap.to_sql(
+                "faits_suivi_cpap_jour",
+                connexion,
+                if_exists="append",
+                index=False
+            )
+        except Exception:
+            traceback.print_exc()
+            raise
+
+    except Exception as e:
+        print(type(e))
+        print(e)
+        raise
+
+    finally:
+        connexion.close()
+def lire_suivi_patient(id_patient):
+    """
+    Appelle la procédure sp_lire_suivi_patient pour récupérer
+    toutes les infos nécessaires à l'insertion des données dans la base analytique.
+
+    On ne fait jamais de SELECT brut sur les tables depuis Python :
+    la lecture passe toujours par cette procédure, comme l'écriture
+    passe toujours par sp_creer_suivi_cpap_jour.
+
+    Lève
+    ----
+    RuntimeError : si l'appel à la procédure échoue côté MySQL
+    ValueError : si aucun résultat n'existe pour cet id_nuit
+    """
+    connexion = None
+    try:
+        connexion = mysql.connector.connect(**MYSQL_CONFIG)
+        curseur = connexion.cursor(dictionary=True)
+
+        curseur.callproc("sp_lire_suivi_patient", [id_patient])
+
+        resultat = None
+        for jeu_resultat in curseur.stored_results():
+            resultat = jeu_resultat.fetchall()
+
+        id_suivi_le_plus_proche = resultat[0]['id_suivi']
+
+        curseur.close()
+
+    except MySQLError as erreur:
+        raise RuntimeError(
+            f"Erreur MySQL lors de l'appel à sp_lire_suivi_patient "
+            f"pour id_patient={id_patient} : {erreur}"
+        ) from erreur
+
+    finally:
+        if connexion is not None and connexion.is_connected():
+            connexion.close()
+
+    if resultat is None:
+        raise ValueError(
+            f"Aucun résultat trouvé pour id_patient={id_patient}."
+        )
+
+    return id_suivi_le_plus_proche
 
 
-
-# ============================================================
+#=============================================================
 # ORCHESTRATION : pipeline complet
-# ============================================================
+#=============================================================
 def executer_pipeline(id_patient):
     """
     Orchestre le pipeline complet .
@@ -231,9 +285,11 @@ def executer_pipeline(id_patient):
         # --- EXTRACT ---
         print("\n[1/6] Extraction du CSV (pandas)...")
         df = lire_csv_capteur(chemin_csv)
+        df["id_suivi_le_plus_proche"] = lire_suivi_patient(id_patient)
+        #print("Notre dataframe :\n", df)
         print(f"  {len(df)} lignes lues")
-        
-        # --- TRANSFORM ---
+
+#--- TRANSFORM ---
         print("\n[2/6] Calcul des alertes depuis le signal (pandas)...")
        
         
@@ -247,17 +303,19 @@ def executer_pipeline(id_patient):
             alimenter_faits_suivi_cpap_jour(
                 id_suivi_source=row.id_suivi,
                 id_patient=id_patient,
+                date_jour=row.date_jour,
                 duree_utilisation_h=row.duree_utilisation_h,
                 iah_residuel=row.iah_residuel,
                 fuites_l_min=row.fuites_l_min,
                 nb_evenements=row.nb_evenements,
                 qualite_donnee=row.qualite_donnee,
+                id_suivi_le_plus_proche=row.id_suivi_le_plus_proche,
                 chemin_db=DB_PATH
     )
-        
+
 
         print(f"\n Pipeline terminé : Patient #{id_patient}\n")
-        
+
 
     except Exception as erreur:
         print(

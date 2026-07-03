@@ -1,6 +1,5 @@
 const {connexion} = require('../db.js');
 
-
 function vueTechniecienCpap(){
     return new Promise ((resolve,reject) => { 
         connexion.query('SELECT * from vuetechnieciencpap;', (err,rows) => {
