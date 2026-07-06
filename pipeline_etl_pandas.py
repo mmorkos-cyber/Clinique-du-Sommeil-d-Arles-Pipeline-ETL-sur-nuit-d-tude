@@ -33,6 +33,8 @@ import mysql.connector
 from mysql.connector import Error as MySQLError
 from mdp import motdepasse, bdd, port
 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -626,7 +628,7 @@ def executer_pipeline(id_nuit, id_medecin_validateur, commentaire_medical):
         print(['position dominante'])
         # --- LOAD : écriture via procédure ---
         print("\n[3/6] Écriture du résultat via sp_creer_resultat_nuit...")
-        confirmation = ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentaire_medical_arg)
+        confirmation = ecrire_resultat_nuit(id_nuit, id_medecin_validateur, indicateurs, commentaire_medical)
         print(f"  IAH calculé par la procédure : {confirmation['iah']}")
         print(f"  Diagnostic : {diagnostic_depuis_iah(float(confirmation['iah']))}")
 

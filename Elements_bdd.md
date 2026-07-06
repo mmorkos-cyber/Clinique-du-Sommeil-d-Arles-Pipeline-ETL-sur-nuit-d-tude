@@ -16,6 +16,26 @@
    - peut accéder à la vue **vue_infirmier_medecins_validateurs** 
    - peut accéder à la table **résultats_nuit** _(SELECT, UPDATE)_. L'infirmier(ère) superviseur(euse) peut saisir un  commentaire. Il choisit également le nom du médecin en service afin de l'assigner aux résultats en tant que médecin validateur.
 
+# CREATION TABLE
+
+## Table RH
+
+```bash
+CREATE TABLE `rh` (
+  `id_personnel` int NOT NULL,
+  `fonction` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id_personnel`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+```
+## Remplir table RH
+```bash
+INSERT INTO `clinic`.`rh` (`id_personnel`, `fonction`) VALUES ('16', 'Directrice RH');
+
+```
+## Ajout RH au personnel
+```bash
+INSERT INTO `clinic`.`personnel` (`id_personnel`, `nom`, `prenom`, `date_embauche`, `telephone`, `email`, `actif`, `password`) VALUES ('16', 'Dumont', 'Christine', '2022-07-05', '0612135689', 'christine.dumont@clinique-sommeil-arles.fr', '1', 'azerty');
+```
 
 # LES VUES
 

@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 import mysql.connector
 from mysql.connector import Error as MySQLError
 from mdp import motdepasse, bdd, port
+import warnings
 
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # CONFIGURATION
 # ============================================================

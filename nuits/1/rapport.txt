@@ -42,7 +42,7 @@ Ronflements forts (>70dB)         : 1133
 SAHOS sévère
 
 Commentaire médical :
-dbfdfsb
+jjjjj
 
 ------------------------------------------------------------
   COURBES JOINTES
@@ -54,5 +54,5 @@ dbfdfsb
 
 ============================================================
   Rapport généré automatiquement par le pipeline ETL.
-  Validé le 2026-07-02 par Dr Garnier.
+  Validé le 2026-07-05 par Dr Garnier.
 ============================================================
